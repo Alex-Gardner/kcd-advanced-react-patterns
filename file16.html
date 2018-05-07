@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Advanced React Component Patterns</title>
+  </head>
+  <body>
+    <link href="https://fonts.googleapis.com/css?family=Antic+Slab" rel="stylesheet">
+    <style>
+    *,
+    *:before,
+    *:after {
+      box-sizing: inherit;
+    }
+    body {
+      font-family: 'Antic Slab', serif;
+    }
+    hr {
+      width: 100%;
+    }
+
+    /*
+    toggle styles copied and modified from
+    https://codepen.io/mallendeo/pen/eLIiG
+    by Mauricio Allende (https://mallendeo.com/)
+    */
+    .toggle-btn {
+      display: inline-block;
+      outline: 0;
+      width: 4em;
+      height: 2em;
+      position: relative;
+      cursor: pointer;
+      user-select: none;
+      background: #fbfbfb;
+      border-radius: 2em;
+      padding: 2px;
+      transition: all 0.4s ease;
+      border: 1px solid #e8eae9;
+    }
+    .toggle-btn:focus::after,
+    .toggle-btn:active::after {
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1),
+      0 4px 0 rgba(0, 0, 0, 0.08),
+      inset 0px 0px 0px 1.5px #9c9c9c;
+    }
+    .toggle-btn::after {
+      left: 0;
+      position: relative;
+      display: block;
+      content: '';
+      width: 50%;
+      height: 100%;
+      border-radius: 2em;
+      background: #fbfbfb;
+      transition: all 0.3s
+      cubic-bezier(0.175, 0.885, 0.32, 1.275),
+      padding 0.3s ease, margin 0.3s ease;
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1),
+      0 4px 0 rgba(0, 0, 0, 0.08);
+    }
+    .toggle-btn.toggle-btn-on::after {
+      left: 50%;
+    }
+    .toggle-btn.toggle-btn-on {
+      background: #86d993;
+    }
+    .toggle-btn.toggle-btn-on:active {
+      box-shadow: none;
+    }
+    .toggle-btn.toggle-btn-on:active::after {
+      margin-left: -0.8em;
+    }
+    .toggle-btn:active::after {
+      padding-right: 0.8em;
+    }
+    .toggle-input {
+      display: none;
+    }
+  </style>
+  <script src="https://unpkg.com/react@16.0.0/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@16.0.0/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/prop-types@15.6.0/prop-types.js"></script>
+  <script src="https://unpkg.com/babel-standalone@6.26.0/babel.js"></script>
+  <script src="https://cdn.rawgit.com/kentcdodds/ea2fdfc82f79228a6be641c78dc0e1b9/raw/0f792eb8dfb3bf993bdf50c9656f12090ed344e6/hoist-non-react-statics.umd.js"></script>
+
+  <div id="cool"></div>
+
+  <script type="text/babel">
+  // Lesson 15: Make Controlled React Components with Control Props
+
+// to make a controlled component, you take the part of the state you want to enable
+// users to control, and any time you're going to reference it, you're going to
+// check wether or not the user is controlling that component. If they are, then you
+// refernece the props version of the state. If they're not, then you reference your
+// own version of the state. In addition, any time you call set state with that state,
+// you first want to check wether that state is being controlled by a prop and if it is
+// you're going to notify the caller that the state has changed, but you don't change
+// it yourself, otherwise you set state yourself. That patter is called controlled props
+// and it gives users a whole lot of control over how your component interacts with
+// the user.
+
+const compose = (...fns) => (...args) => fns.forEach(fn => fn && fn(...args));
+
+class Toggle extends React.Component {
+	static defaultProps = {
+		defaultOn: false,
+		onToggle: () => {},
+		onReset: () => {}
+	};
+	initialState = { on: this.props.defaultOn };
+	state = this.initialState;
+	reset = () => {
+		// if this component (Toggle) is being controlled, delegate these functions
+		// (toggle state and resetting state) to the parent component (App)
+		if (this.isOnControlled()) {
+			this.props.onReset(!this.props.on);
+			// otherwise, it should go ahead and adjust the state itself
+		} else {
+			this.setState(this.initialState, () => this.props.onReset(this.state.on));
+		}
+	};
+	toggle = () => {
+		if (this.isOnControlled()) {
+			this.props.onToggle(!this.props.on);
+		} else {
+			this.setState(
+				({ on }) => ({ on: !on }),
+				() => this.props.onToggle(this.state.on)
+			);
+		}
+	};
+	getTogglerProps = ({ onClick, ...props } = {}) => {
+		return {
+			'aria-expanded': this.state.on,
+			onClick: compose(onClick, this.toggle),
+			...props
+		};
+	};
+	isOnControlled() {
+		return this.props.on !== undefined;
+	}
+	render() {
+		return this.props.render({
+			on: this.isOnControlled() ? this.props.on : this.state.on,
+			toggle: this.toggle,
+			reset: this.reset,
+			getTogglerProps: this.getTogglerProps
+		});
+	}
+}
+
+class App extends React.Component {
+	initialState = { timesClicked: 0, on: false };
+	state = this.initialState;
+	handleToggle = () => {
+		this.setState(({ timesClicked, on }) => ({
+			timesClicked: timesClicked + 1,
+			on: timesClicked >= 4 ? false : !on
+		}));
+	};
+	handleReset = () => {
+		this.setState(this.initialState);
+	};
+	render() {
+		const { timesClicked, on } = this.state;
+		return (
+			<Toggle
+				on={on}
+				onToggle={this.handleToggle}
+				onReset={this.handleReset}
+				render={toggle => (
+					<div>
+						<Switch
+							{...toggle.getTogglerProps({
+								on: toggle.on
+							})}
+						/>
+						{timesClicked > 4 ? (
+							<div>
+								"Woah, you've clicked too much!"
+								<br />
+								<button onClick={toggle.reset}>Reset</button>
+							</div>
+						) : timesClicked > 0 ? (
+							<div>Click count: {timesClicked}</div>
+						) : null}
+					</div>
+				)}
+			/>
+		);
+	}
+}
+/*
+    *
+    *
+    * Below here are irrelevant
+    * implementation details...
+    *
+    *
+    */
+
+function Switch({ on, className = '', ...props }) {
+	return (
+		<div className="toggle">
+			<input className="toggle-input" type="checkbox" />
+			<button
+				className={`${className} toggle-btn ${
+					on ? 'toggle-btn-on' : 'toggle-btn-off'
+				}`}
+				{...props}
+			/>
+		</div>
+	);
+}
+
+ReactDOM.render(
+	<div
+		style={{
+			marginTop: 40,
+			display: 'flex',
+			justifyContent: 'center',
+			flexDirection: 'column',
+			textAlign: 'center'
+		}}
+	>
+		<App />
+	</div>,
+	document.getElementById('cool')
+);
+</script>
+</body>
+
+</html>

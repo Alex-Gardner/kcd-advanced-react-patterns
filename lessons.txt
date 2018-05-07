@@ -1,0 +1,19 @@
+1: Introducing Advanced React Component Patterns
+2: Build a Toggle Component
+3: Write Compound Components
+4: Make Compound React Components Flexible
+5: Make Enhanced React Components with Higher Order Components
+6: Handle prop namespace clashes with Higher Order Components
+7: Improve debuggability of Higher Order Components
+8: Handle ref props with Higher Order Components
+9: Improve Unit Testability of Higher Order Components
+10: Handle static properties properly with HOCs
+11: Use Render Props with React
+12: Use Prop Collections with Render Props
+13: Use Prop Getters with Render Props
+14: Use Component State Initializers
+15: Make Controlled React Components with Control Props
+16: Implement a React Context Provider
+17: Implement a HOC with Render Props
+18: Rerender Descendants Through shouldComponentUpdate
+19: Use Redux with Render Props
